@@ -6,10 +6,11 @@ from discord import app_commands
 from discord import Interaction
 from discord.app_commands.errors import MissingAnyRole
 from discord.app_commands.checks import has_any_role
+import aiohttp
 
 import db
 
-TEST_GUILDS_ID = [1, 2, 3]
+TEST_GUILDS_ID = cfg.TEST_GUILDS_ID
 TEST_GUILDS = [discord.Object(gid) for gid in TEST_GUILDS_ID]
 print([guild.created_at for guild in TEST_GUILDS])
 class MyClient(discord.Client):
@@ -94,19 +95,20 @@ async def vasserman(interaction: discord.Interaction,
               description='adds custom emoji')
 async def add_emoji(interaction: Interaction, emoji: str, name: str = None):
     try:
-        print(re.findall(r":\d+", emoji))
-        emoji_id = int(re.findall(r":\d+", emoji).pop(0).strip(":"))
-        print(emoji_id)
-        emj = interaction.client.get_emoji(emoji_id)
-        print(emj)
+        emj_anim, emj_name, emj_id = emoji.strip('<>').split(':')
+        print(emj_id)
+        emj_format = 'webp' if not emj_anim else 'gif'
+        url = f'https://cdn.discordapp.com/emojis/{emj_id}.{emj_format}'
         if name == None:
-            name = emj.name
-        await interaction.guild.create_custom_emoji(name=name, image=await emj.read())
+            name = emj_name
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url) as resp:
+                emoji = await interaction.guild.create_custom_emoji(name=name, image=await resp.read())
     except (Exception) as e:
         print(f"[ERROR] {e}")
         await interaction.response.send_message("Произошла ошибка!")
     else:
-        await interaction.response.send_message("Эмодзи был успешно добавлен!")
+        await interaction.response.send_message("Эмодзи <{}:{}:{}> был успешно добавлен!".format(emj_anim, emj_name, emj_id))
         
 # @vasserman.error
 # async def on_application_command_error(ctx: Interaction, error: discord.DiscordException):
@@ -117,8 +119,8 @@ async def add_emoji(interaction: Interaction, emoji: str, name: str = None):
 
 @client.event
 async def on_ready():
-    tree.clear_commands(guild=TEST_GUILDS[2])
-    await tree.sync(guild=TEST_GUILDS[2])
+    tree.clear_commands(guild=TEST_GUILDS[1])
+    await tree.sync(guild=TEST_GUILDS[1])
     print('Ready!')
 
 @client.event
