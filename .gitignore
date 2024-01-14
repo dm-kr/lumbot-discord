@@ -3,3 +3,6 @@
 cfg.py
 DLumBot.db
 requirements.txt
+.env
+dbquery.py
+msg_log.txt
